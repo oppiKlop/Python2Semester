@@ -270,7 +270,7 @@ def cost_operation(category_name: str, amount: float, date: DataTuple) -> str:
     return OP_SUCCESS_MSG
 
 
-def add_for_tests(date: str) -> None:
+def add_for_tests() -> None:
     financial_transactions_storage.append({})
 
 
