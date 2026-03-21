@@ -51,22 +51,22 @@ EXPENSE_CATEGORIES: dict[str, tuple[str, ...]] = {
 }
 
 
-def income(amount: float, date: str) -> str:
+def income_handler(amount: float, date: str) -> str:
     if amount > 0:
         tuple_date = extract_data(date)
         if tuple_date is not None:
-            return income_handler(amount, date)
+            return income(amount, date)
         return INCORRECT_DATE_MSG
     return NONPOSITIVE_VALUE_MSG
 
 
-def cost_operation(category_name: str, amount: float, date: str) -> str:
+def cost_handler(category_name: str, amount: float, date: str) -> str:
     if categories_validate(category_name):
         category_path = category_name.split("::")
         if amount > 0:
             tuple_date = extract_data(date)
             if tuple_date is not None:
-                return cost_handler(category_path[1], amount, date)
+                return cost_operation(category_path[1], amount, date)
             return INCORRECT_DATE_MSG
         return NONPOSITIVE_VALUE_MSG
     return NOT_EXISTS_CATEGORY
@@ -229,13 +229,13 @@ def main() -> None:
 
 def process_income(input_line: list[str]) -> str:
     if len(input_line) == INCOME_ARGS:
-        return income(float(input_line[1]), input_line[2])
+        return income_handler(float(input_line[1]), input_line[2])
     return UNKNOWN_COMMAND_MSG
 
 
 def process_cost(input_line: list[str]) -> Any:
     if len(input_line) == COST_ARGS_TO_OPERATE:
-        return cost_operation(input_line[1], float(input_line[2]), input_line[3])
+        return cost_handler(input_line[1], float(input_line[2]), input_line[3])
     if len(input_line) == COST_ARGS_TO_GET_CATEGORIES:
         return cost_get_categories(input_line[1])
     return UNKNOWN_COMMAND_MSG
@@ -255,12 +255,12 @@ def is_leap_year(year: int) -> bool:
     return year % 4 == 0
 
 
-def income_handler(amount: float, income_date: str) -> str:
+def income(amount: float, income_date: str) -> str:
     financial_transactions_storage.append({AMOUNT_KEY: amount, DATE_KEY: income_date})
     return OP_SUCCESS_MSG
 
 
-def cost_handler(category_name: str, amount: float, income_date: str) -> str:
+def cost_operation(category_name: str, amount: float, income_date: str) -> str:
     financial_transactions_storage.append({CATEGORY_KEY: category_name, AMOUNT_KEY: amount, DATE_KEY: income_date})
     return OP_SUCCESS_MSG
 
