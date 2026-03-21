@@ -112,7 +112,7 @@ def print_categories(tuple_date: DataTuple) -> list[str]:
     if categories:
         idx = 1
         for cat, amount in categories.items():
-            categories_print.append(f"\n{idx}. {cat}: {amount:.0f}")
+            categories_print.append(f"{idx}. {cat}: {amount:.0f}")
     return categories_print
 
 
@@ -172,7 +172,7 @@ def count_categories(tuple_date: DataTuple) -> dict[str, float]:
         if CATEGORY_KEY in transaction:
             dt = get_tuple_date(transaction[DATE_KEY])
             if compare_date(tuple_date, dt) and is_same_month(tuple_date, dt):
-                cat = transaction.get(DATE_KEY, "")
+                cat = transaction.get(CATEGORY_KEY, "")
                 amount = transaction[AMOUNT_KEY]
                 categories[cat] = categories.get(cat, float(0)) + amount
     return dict(sorted(categories.items()))
