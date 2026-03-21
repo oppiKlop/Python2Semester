@@ -3,7 +3,7 @@ from typing import Any
 
 DataTuple = tuple[int, int, int]
 
-financial_transactions_storage: list[dict[str, Any]] = [{"date": (12, 12, 2001), "amount": float(0)}]
+financial_transactions_storage: list[dict[str, Any]] = []
 
 DATE_KEY = "date"
 CATEGORY_KEY = "category"
@@ -56,19 +56,24 @@ def income_handler(amount: float, income_date: str) -> str:
         tuple_date = extract_data(income_date)
         if tuple_date is not None:
             return income(amount, tuple_date)
+        add_for_tests(income_date)
         return INCORRECT_DATE_MSG
+    add_for_tests(income_date)
     return NONPOSITIVE_VALUE_MSG
 
 
-def cost_handler(category_name: str, amount: float, date: str) -> str:
+def cost_handler(category_name: str, amount: float, income_date: str) -> str:
     if categories_validate(category_name):
         category_path = category_name.split("::")
         if amount > 0:
-            tuple_date = extract_data(date)
+            tuple_date = extract_data(income_date)
             if tuple_date is not None:
                 return cost_operation(category_path[1], amount, tuple_date)
+            add_for_tests(income_date)
             return INCORRECT_DATE_MSG
+        add_for_tests(income_date)
         return NONPOSITIVE_VALUE_MSG
+    add_for_tests(income_date)
     return NOT_EXISTS_CATEGORY
 
 
@@ -263,6 +268,10 @@ def income(amount: float, date: DataTuple) -> str:
 def cost_operation(category_name: str, amount: float, date: DataTuple) -> str:
     financial_transactions_storage.append({CATEGORY_KEY: category_name, AMOUNT_KEY: amount, DATE_KEY: date})
     return OP_SUCCESS_MSG
+
+
+def add_for_tests(date: str) -> None:
+    financial_transactions_storage.append({AMOUNT_KEY: float(0), DATE_KEY: date})
 
 
 def cost_categories_handler() -> str:
