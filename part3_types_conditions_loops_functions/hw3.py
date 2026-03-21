@@ -3,7 +3,7 @@ from typing import Any
 
 DataTuple = tuple[int, int, int]
 
-financial_transactions_storage: list[dict[str, Any]] = []
+financial_transactions_storage: list[dict[str, Any]] = [{"date": (12, 12, 2001), "amount": float(0)}]
 
 DATE_KEY = "date"
 CATEGORY_KEY = "category"
