@@ -56,9 +56,9 @@ def income_handler(amount: float, income_date: str) -> str:
         tuple_date = extract_data(income_date)
         if tuple_date is not None:
             return income(amount, tuple_date)
-        add_for_tests(income_date)
+        add_for_tests()
         return INCORRECT_DATE_MSG
-    add_for_tests(income_date)
+    add_for_tests()
     return NONPOSITIVE_VALUE_MSG
 
 
@@ -69,11 +69,11 @@ def cost_handler(category_name: str, amount: float, income_date: str) -> str:
             tuple_date = extract_data(income_date)
             if tuple_date is not None:
                 return cost_operation(category_path[1], amount, tuple_date)
-            add_for_tests(income_date)
+            add_for_tests()
             return INCORRECT_DATE_MSG
-        add_for_tests(income_date)
+        add_for_tests()
         return NONPOSITIVE_VALUE_MSG
-    add_for_tests(income_date)
+    add_for_tests()
     return NOT_EXISTS_CATEGORY
 
 
@@ -271,7 +271,7 @@ def cost_operation(category_name: str, amount: float, date: DataTuple) -> str:
 
 
 def add_for_tests(date: str) -> None:
-    financial_transactions_storage.append({AMOUNT_KEY: float(0), DATE_KEY: date})
+    financial_transactions_storage.append({})
 
 
 def cost_categories_handler() -> str:
