@@ -83,7 +83,7 @@ def cost_get_categories(categories: str) -> str:
     return UNKNOWN_COMMAND_MSG
 
 
-def stats(date: str) -> str:
+def stats_handler(date: str) -> str:
     tuple_date = extract_data(date)
     if tuple_date is not None:
         month_profit = print_month_profit(tuple_date)
@@ -248,7 +248,7 @@ def process_cost(input_line: list[str]) -> Any:
 
 def process_stats(input_line: list[str]) -> str:
     if len(input_line) == STATS_ARGS:
-        return stats(input_line[1])
+        return stats_handler(input_line[1])
     return UNKNOWN_COMMAND_MSG
 
 
