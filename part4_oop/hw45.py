@@ -16,7 +16,7 @@ class DictStorage(Storage[K, V]):
         self._data[key] = value
 
     def get(self, key: K) -> V | None:
-        return self._data[key]
+        return self._data.get(key)
 
     def exists(self, key: K) -> bool:
         return key in self._data
@@ -65,7 +65,9 @@ class LRUPolicy(Policy[K]):
         self._order.append(key)
 
     def get_key_to_evict(self) -> K | None:
-        raise NotImplementedError
+        if len(self._order) > self.capacity:
+            return self._order[0]
+        return None
 
     def remove_key(self, key: K) -> None:
         if key in self._order:
@@ -83,23 +85,34 @@ class LRUPolicy(Policy[K]):
 class LFUPolicy(Policy[K]):
     capacity: int = 5
     _key_counter: dict[K, int] = field(default_factory=dict, init=False)
+    _order: list[K] = field(default_factory=list, init=False)
 
     def register_access(self, key: K) -> None:
         if key not in self._key_counter:
             self._key_counter[key] = 0
+            self._order.append(key)
         self._key_counter[key] += 1
 
     def get_key_to_evict(self) -> K | None:
         if len(self._key_counter) > self.capacity:
-            return min(self._key_counter, key=self._key_counter.get)
+            sorted_keys = sorted(
+                self._key_counter,
+                key=lambda item: (self._key_counter[item], self._order.index(item))
+            )
+            if sorted_keys[0] == self._order[-1]:
+                return sorted_keys[1]
+            return sorted_keys[0]
         return None
 
     def remove_key(self, key: K) -> None:
         if key in self._key_counter:
             del self._key_counter[key]
+        if key in self._order:
+            self._order.remove(key)
 
     def clear(self) -> None:
         self._key_counter.clear()
+        self._order.clear()
 
     @property
     def has_keys(self) -> bool:
@@ -141,7 +154,7 @@ class CachedProperty[V]:
     def __init__(self, func: Callable[..., V]) -> None:
         self.func = func
         self.key = func.__name__
-        
+
     def __get__(self, instance: HasCache[Any, Any] | None, owner: type) -> V:
         if instance is None:
             return self
