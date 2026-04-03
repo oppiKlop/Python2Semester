@@ -23,7 +23,7 @@ class DictStorage(Storage[K, V]):
 
     def remove(self, key: K) -> None:
         if key in self._data:
-            del self._data[key]
+            self._data.pop(key)
 
     def clear(self) -> None:
         self._data.clear()
@@ -109,7 +109,7 @@ class LFUPolicy(Policy[K]):
 
     def remove_key(self, key: K) -> None:
         if key in self._key_counter:
-            del self._key_counter[key]
+            self._key_counter.pop(key)
         if key in self._order:
             self._order.remove(key)
 
