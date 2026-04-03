@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, TypeVar, cast
+from typing import Any, TypeVar
 
 from part4_oop.interfaces import Cache, HasCache, Policy, Storage
 
@@ -165,7 +165,7 @@ class CachedProperty[V]:
         cache = instance.cache
         value = cache.get(self.key)
         if value is not None:
-            return value # type: ignore[return-value]
+            return value
         value = self.func(instance)
         cache.set(self.key, value)
         return value
