@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 
 from part4_oop.interfaces import Cache, HasCache, Policy, Storage
 
@@ -95,7 +95,7 @@ class LFUPolicy(Policy[K]):
         self._key_counter[key] += 1
 
     def get_key_to_evict(self) -> K | None:
-        if len(self._key_counter) > self.capacity:
+        if len(self._key_counter) >= self.capacity:
             last_key = self._order[-1]
             candidates = [k for k in self._order if k != last_key]
             if not candidates:
@@ -161,8 +161,8 @@ class CachedProperty[V]:
 
     def __get__(self, instance: HasCache[Any, Any] | None, owner: type) -> V:
         if instance is None:
-            return self  # type: ignore[return-value]
-        cache = instance.cache
+            return cast(Any, self)
+        cache = cast(Cache[str, V], instance.cache)
         value = cache.get(self.key)
         if value is not None:
             return value
