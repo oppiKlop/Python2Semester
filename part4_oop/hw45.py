@@ -54,6 +54,7 @@ class FIFOPolicy(Policy[K]):
     def has_keys(self) -> bool:
         return len(self._order) > 0
 
+
 @dataclass
 class LRUPolicy(Policy[K]):
     capacity: int = 5
@@ -95,13 +96,15 @@ class LFUPolicy(Policy[K]):
 
     def get_key_to_evict(self) -> K | None:
         if len(self._key_counter) > self.capacity:
-            sorted_keys = sorted(
-                self._key_counter,
-                key=lambda item: (self._key_counter[item], self._order.index(item))
-            )
-            if sorted_keys[0] == self._order[-1]:
-                return sorted_keys[1]
-            return sorted_keys[0]
+            last_key = self._order[-1]
+            candidates = [k for k in self._order if k != last_key]
+            if not candidates:
+                return last_key
+            min_count = min(self._key_counter[k] for k in candidates)
+            for key in candidates:
+                if self._key_counter[key] == min_count:
+                    return key
+            return None
         return None
 
     def remove_key(self, key: K) -> None:
@@ -150,6 +153,7 @@ class MIPTCache(Cache[K, V]):
         self.storage.clear()
         self.policy.clear()
 
+
 class CachedProperty[V]:
     def __init__(self, func: Callable[..., V]) -> None:
         self.func = func
@@ -157,10 +161,11 @@ class CachedProperty[V]:
 
     def __get__(self, instance: HasCache[Any, Any] | None, owner: type) -> V:
         if instance is None:
-            return self
+            return self  # type: ignore[return-value]
         cache = instance.cache
-        if cache.exists(self.key):
-            return cache.get(self.key)
+        value = cache.get(self.key)
+        if value is not None:
+            return value
         value = self.func(instance)
         cache.set(self.key, value)
         return value
