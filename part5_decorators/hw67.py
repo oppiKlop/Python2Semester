@@ -1,6 +1,6 @@
-from datetime import datetime, timezone
 import functools
 import json
+from datetime import UTC, datetime
 from typing import Any, ParamSpec, Protocol, TypeVar
 from urllib.request import urlopen
 
@@ -50,13 +50,13 @@ class CircuitBreaker:
         self.time_to_recover = time_to_recover
         self.triggers_on = triggers_on
 
-        self._fail_count: int = 0
+        self._fail_count = 0
         self._blocked_until: float | None = None
 
     def __call__(self, func: CallableWithMeta[P, R_co]) -> CallableWithMeta[P, R_co]:
         @functools.wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R_co:
-            now_dt = datetime.now(timezone.utc)
+            now_dt = datetime.now(UTC)
             now = now_dt.timestamp()
 
             if self._blocked_until is not None:
@@ -64,25 +64,21 @@ class CircuitBreaker:
                     err = BreakerError(TOO_MUCH)
                     err.func_name = f"{func.__module__}.{func.__name__}"
                     err.block_time = datetime.fromtimestamp(
-                        self._blocked_until, tz=timezone.utc
+                        self._blocked_until, tz=UTC
                     )
                     raise err
-                else:
-                    self._blocked_until = None
-                    self._fail_count = 0
+                self._blocked_until = None
+                self._fail_count = 0
 
             try:
                 result = func(*args, **kwargs)
-                self._fail_count = 0
-                return result
 
             except Exception as e:
                 if not isinstance(e, self.triggers_on):
                     raise
-
                 self._fail_count += 1
 
-                if self._fail_count >= self.critical_count:
+                if self._fail_count > self.critical_count:
                     self._blocked_until = now + self.time_to_recover
 
                     err = BreakerError(TOO_MUCH)
@@ -91,6 +87,10 @@ class CircuitBreaker:
 
                     raise err from e
                 raise
+
+            else:
+                self._fail_count = 0
+                return result
         return wrapper
 
 
@@ -108,9 +108,7 @@ def get_comments(post_id: int) -> Any:
     Returns:
         list[dict[int | str]]: Список комментариев
     """
-    response = urlopen(
-        f"https://jsonplaceholder.typicode.com/comments?postId={post_id}"
-    )
+    response = urlopen(f"https://jsonplaceholder.typicode.com/comments?postId={post_id}")
     return json.loads(response.read())
 
 
