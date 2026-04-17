@@ -39,11 +39,11 @@ class CircuitBreaker:
     ):
         errors: list[Exception] = []
         if not isinstance(critical_count, int) or (critical_count <= 0):
-            errors.append(ValueError[INVALID_CRITICAL_COUNT])
+            errors.append(ValueError(INVALID_CRITICAL_COUNT))
         if not isinstance(time_to_recover, int) or (time_to_recover <= 0):
-            errors.append(ValueError[INVALID_RECOVERY_TIME])
+            errors.append(ValueError(INVALID_RECOVERY_TIME))
         if errors:
-            raise ExceptionGroup[VALIDATIONS_FAILED, errors]
+            raise ExceptionGroup(VALIDATIONS_FAILED, errors)
 
         self.critical_count = critical_count
         self.time_to_recover = time_to_recover
@@ -75,15 +75,14 @@ class CircuitBreaker:
 
             except Exception as e:
                 if isinstance(e, self.triggers_on):
-                    self._fail_count += 1
-                    if self._fail_count >= self.critical_count:
-                        self._blocked_until = now + self.time_to_recover
-                        err = BreakerError(TOO_MUCH)
-                        err.func_name = f"{func.__module__}.{func.__name__}"
-                        err.block_time = datetime.fromtimestamp(
-                            self._blocked_until, tz=timezone.utc
-                        )
-                        raise err from e
+                    raise
+                self._fail_count += 1
+                if self._fail_count >= self.critical_count:
+                    self._blocked_until = now + self.time_to_recover
+                    err = BreakerError(TOO_MUCH)
+                    err.func_name = f"{func.__module__}.{func.__name__}"
+                    err.block_time = datetime.fromtimestamp(now, tz=timezone.utc)
+                    raise err from e
                 raise
         return wrapper
 
