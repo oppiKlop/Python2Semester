@@ -1,7 +1,6 @@
 from datetime import datetime, timezone
 import functools
 import json
-import time
 from typing import Any, ParamSpec, Protocol, TypeVar
 from urllib.request import urlopen
 
@@ -24,10 +23,10 @@ class CallableWithMeta(Protocol[P, R_co]):
 
 
 class BreakerError(Exception):
-    def __init__(self, message : object) -> None:
+    def __init__(self, message: object) -> None:
         super().__init__(message)
-        self.func_name : str | None = None
-        self.block_time : datetime | None = None
+        self.func_name: str | None = None
+        self.block_time: datetime | None = None
 
 
 class CircuitBreaker:
@@ -38,10 +37,12 @@ class CircuitBreaker:
         triggers_on: type[Exception] = Exception,
     ):
         errors: list[Exception] = []
-        if not isinstance(critical_count, int) or (critical_count <= 0):
+
+        if not isinstance(critical_count, int) or critical_count <= 0:
             errors.append(ValueError(INVALID_CRITICAL_COUNT))
-        if not isinstance(time_to_recover, int) or (time_to_recover <= 0):
+        if not isinstance(time_to_recover, int) or time_to_recover <= 0:
             errors.append(ValueError(INVALID_RECOVERY_TIME))
+
         if errors:
             raise ExceptionGroup(VALIDATIONS_FAILED, errors)
 
@@ -55,7 +56,9 @@ class CircuitBreaker:
     def __call__(self, func: CallableWithMeta[P, R_co]) -> CallableWithMeta[P, R_co]:
         @functools.wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R_co:
-            now = time.time()
+            now_dt = datetime.now(timezone.utc)
+            now = now_dt.timestamp()
+
             if self._blocked_until is not None:
                 if now < self._blocked_until:
                     err = BreakerError(TOO_MUCH)
@@ -74,14 +77,18 @@ class CircuitBreaker:
                 return result
 
             except Exception as e:
-                if isinstance(e, self.triggers_on):
+                if not isinstance(e, self.triggers_on):
                     raise
+
                 self._fail_count += 1
+
                 if self._fail_count >= self.critical_count:
                     self._blocked_until = now + self.time_to_recover
+
                     err = BreakerError(TOO_MUCH)
                     err.func_name = f"{func.__module__}.{func.__name__}"
-                    err.block_time = datetime.fromtimestamp(now, tz=timezone.utc)
+                    err.block_time = now_dt
+
                     raise err from e
                 raise
         return wrapper
@@ -101,7 +108,9 @@ def get_comments(post_id: int) -> Any:
     Returns:
         list[dict[int | str]]: Список комментариев
     """
-    response = urlopen(f"https://jsonplaceholder.typicode.com/comments?postId={post_id}")
+    response = urlopen(
+        f"https://jsonplaceholder.typicode.com/comments?postId={post_id}"
+    )
     return json.loads(response.read())
 
 
