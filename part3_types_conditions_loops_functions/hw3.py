@@ -173,7 +173,7 @@ def count_categories(reference_date: DateTuple) -> dict[str, float]:
             continue
         category_name = transaction[CATEGORY_KEY]
         amount = transaction[AMOUNT_KEY]
-        categories[category_name] = (categories.get(category_name, 0.0) + amount)
+        categories[category_name] = categories.get(category_name, 0.0) + amount
     return dict(sorted(categories.items()))
 
 
@@ -247,8 +247,8 @@ def stats_handler(date: str) -> str:
     parsed_date = extract_date(date)
     if parsed_date is None:
         return INCORRECT_DATE_MSG
-    month_profit = (count_monthly_income(parsed_date) - count_monthly_expense(parsed_date))
-    profit_type = ("the profit" if month_profit > 0 else "the loss")
+    month_profit = count_monthly_income(parsed_date) - count_monthly_expense(parsed_date)
+    profit_type = "the profit" if month_profit > 0 else "the loss"
     result = STATS_PRINT.format(
         date,
         print_capital(parsed_date),
