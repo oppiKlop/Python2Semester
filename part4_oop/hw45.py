@@ -22,8 +22,7 @@ class DictStorage(Storage[K, V]):
         return key in self._data
 
     def remove(self, key: K) -> None:
-        if key in self._data:
-            self._data.pop(key)
+        self._data.pop(key, None)
 
     def clear(self) -> None:
         self._data.clear()
@@ -41,6 +40,7 @@ class FIFOPolicy(Policy[K]):
     def get_key_to_evict(self) -> K | None:
         if len(self._order) > self.capacity:
             return self._order[0]
+
         return None
 
     def remove_key(self, key: K) -> None:
@@ -52,7 +52,7 @@ class FIFOPolicy(Policy[K]):
 
     @property
     def has_keys(self) -> bool:
-        return len(self._order) > 0
+        return bool(self._order)
 
 
 @dataclass
@@ -63,11 +63,13 @@ class LRUPolicy(Policy[K]):
     def register_access(self, key: K) -> None:
         if key in self._order:
             self._order.remove(key)
+
         self._order.append(key)
 
     def get_key_to_evict(self) -> K | None:
         if len(self._order) > self.capacity:
             return self._order[0]
+
         return None
 
     def remove_key(self, key: K) -> None:
@@ -79,25 +81,23 @@ class LRUPolicy(Policy[K]):
 
     @property
     def has_keys(self) -> bool:
-        return len(self._order) > 0
+        return bool(self._order)
 
 
 @dataclass
 class LFUPolicy(Policy[K]):
     capacity: int = 5
     _key_counter: dict[K, int] = field(default_factory=dict, init=False)
-    _order: list[K] = field(default_factory=list, init=False)
 
     def register_access(self, key: K) -> None:
         if key not in self._key_counter:
             self._key_counter[key] = 0
-            self._order.append(key)
         self._key_counter[key] += 1
 
     def get_key_to_evict(self) -> K | None:
         if len(self._key_counter) >= self.capacity:
-            last_key = self._order[-1]
-            candidates = [k for k in self._order if k != last_key]
+            last_key = list(self._key_counter)[-1]
+            candidates = [k for k in list(self._key_counter) if k != last_key]
             if not candidates:
                 return last_key
             min_count = min(self._key_counter[k] for k in candidates)
@@ -108,29 +108,24 @@ class LFUPolicy(Policy[K]):
         return None
 
     def remove_key(self, key: K) -> None:
-        if key in self._key_counter:
-            self._key_counter.pop(key)
-        if key in self._order:
-            self._order.remove(key)
+        self._key_counter.pop(key, None)
 
     def clear(self) -> None:
         self._key_counter.clear()
-        self._order.clear()
 
     @property
     def has_keys(self) -> bool:
-        return len(self._key_counter) > 0
+        return bool(self._key_counter)
 
 
+@dataclass
 class MIPTCache(Cache[K, V]):
-    def __init__(self, storage: Storage[K, V], policy: Policy[K]) -> None:
-        self.storage = storage
-        self.policy = policy
+    storage: Storage[K, V]
+    policy: Policy[K]
 
     def set(self, key: K, value: V) -> None:
         self.storage.set(key, value)
         self.policy.register_access(key)
-
         evict_key = self.policy.get_key_to_evict()
         if evict_key is not None:
             self.storage.remove(evict_key)
@@ -143,7 +138,10 @@ class MIPTCache(Cache[K, V]):
         return value
 
     def exists(self, key: K) -> bool:
-        return self.storage.exists(key)
+        exists = self.storage.exists(key)
+        if exists:
+            self.policy.register_access(key)
+        return exists
 
     def remove(self, key: K) -> None:
         self.storage.remove(key)
@@ -154,16 +152,20 @@ class MIPTCache(Cache[K, V]):
         self.policy.clear()
 
 
-class CachedProperty[V]:
+class CachedProperty(Generic[V]):
     def __init__(self, func: Callable[..., V]) -> None:
         self.func = func
-        self.key = func.__name__
+        self.key = ""
 
-    def __get__(self, instance: HasCache[Any, Any] | None, owner: type) -> V:
+    def __set_name__(self, owner: type, name: str) -> None:
+        self.key = f"{owner.__name__}.{name}"
+
+    def __get__(self, instance: HasCache[Any, Any] | None, owner: type,) -> Any:
         if instance is None:
             return self  # type: ignore[return-value]
-        cache = instance.cache
-        value = cache.get(self.key)
-        value = self.func(instance)
-        cache.set(self.key, value)
-        return value
+        cached_value = instance.cache.get(self.key)
+        if cached_value is not None:
+            return cached_value
+        computed_value = self.func(instance)
+        instance.cache.set(self.key, computed_value)
+        return computed_value
