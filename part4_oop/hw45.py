@@ -152,7 +152,7 @@ class MIPTCache(Cache[K, V]):
         self.policy.clear()
 
 
-class CachedProperty(Generic[V]):
+class CachedProperty[V]:
     def __init__(self, func: Callable[..., V]) -> None:
         self.func = func
         self.key = ""
@@ -160,7 +160,7 @@ class CachedProperty(Generic[V]):
     def __set_name__(self, owner: type, name: str) -> None:
         self.key = f"{owner.__name__}.{name}"
 
-    def __get__(self, instance: HasCache[Any, Any] | None, owner: type,) -> Any:
+    def __get__(self, instance: HasCache[Any, Any] | None, owner: type) -> V:
         if instance is None:
             return self  # type: ignore[return-value]
         cached_value = instance.cache.get(self.key)
