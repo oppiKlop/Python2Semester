@@ -147,7 +147,10 @@ def count_monthly_income(reference_date: DateTuple) -> float:
     return monthly_income
 
 
-def check_count_monthly_income(transaction: dict[str, Any], reference_date: DateTuple, transaction_date: DateTuple) -> bool:
+def check_count_monthly_income(
+        transaction: dict[str, Any],
+        reference_date: DateTuple,
+        transaction_date: DateTuple) -> bool:
     if CATEGORY_KEY in transaction:
         return False
     if not is_not_later(reference_date, transaction_date):
@@ -165,7 +168,10 @@ def count_monthly_expense(reference_date: DateTuple) -> float:
     return monthly_expense
 
 
-def check_count_monthly_expense(transaction: dict[str, Any], reference_date: DateTuple, transaction_date: DateTuple) -> bool:
+def check_count_monthly_expense(
+        transaction: dict[str, Any],
+        reference_date: DateTuple,
+        transaction_date: DateTuple) -> bool:
     if CATEGORY_KEY not in transaction:
         return False
     if not is_not_later(reference_date, transaction_date):
