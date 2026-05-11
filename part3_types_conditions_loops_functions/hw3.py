@@ -119,6 +119,7 @@ def is_same_month(first_date: DateTuple, second_date: DateTuple) -> bool:
 def is_not_later(reference_date: DateTuple, transaction_date: DateTuple) -> bool:
     return to_comparable_date(transaction_date) <= to_comparable_date(reference_date)
 
+
 def to_comparable_date(date: DateTuple) -> DateTuple:
     day, month, year = date
     return (year, month, day)
@@ -148,9 +149,8 @@ def count_monthly_income(reference_date: DateTuple) -> float:
 
 
 def check_count_monthly_income(
-        transaction: dict[str, Any],
-        reference_date: DateTuple,
-        transaction_date: DateTuple) -> bool:
+    transaction: dict[str, Any], reference_date: DateTuple, transaction_date: DateTuple
+) -> bool:
     if CATEGORY_KEY in transaction:
         return False
     if not is_not_later(reference_date, transaction_date):
@@ -169,9 +169,8 @@ def count_monthly_expense(reference_date: DateTuple) -> float:
 
 
 def check_count_monthly_expense(
-        transaction: dict[str, Any],
-        reference_date: DateTuple,
-        transaction_date: DateTuple) -> bool:
+    transaction: dict[str, Any], reference_date: DateTuple, transaction_date: DateTuple
+) -> bool:
     if CATEGORY_KEY not in transaction:
         return False
     if not is_not_later(reference_date, transaction_date):
@@ -189,6 +188,7 @@ def count_categories(reference_date: DateTuple) -> dict[str, float]:
         amount = transaction[AMOUNT_KEY]
         categories[category_name] = categories.get(category_name, float(0)) + amount
     return dict(sorted(categories.items()))
+
 
 def check_count_categories(transaction: dict[str, Any], reference_date: DateTuple, transaction_date: DateTuple) -> bool:
     if CATEGORY_KEY not in transaction:
