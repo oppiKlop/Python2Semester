@@ -165,7 +165,7 @@ class CachedProperty[V]:
             return self  # type: ignore[return-value]
         cached_value = instance.cache.get(self.key)
         if cached_value is not None:
-            return cached_value
+            return cached_value  # type: ignore[return-value]
         computed_value = self.func(instance)
         instance.cache.set(self.key, computed_value)
         return computed_value
