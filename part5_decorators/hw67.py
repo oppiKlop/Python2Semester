@@ -1,6 +1,6 @@
 import functools
 import json
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any, ParamSpec, Protocol, TypeVar
 from urllib.request import urlopen
 
@@ -24,7 +24,7 @@ class BreakerError(Exception):
     def __init__(
         self,
         func_name: str,
-        block_time: datetime,
+        block_time: datetime | None,
         source_exception: Exception | None = None,
     ) -> None:
         super().__init__(TOO_MUCH)
@@ -59,24 +59,30 @@ class CircuitBreaker:
         self._failure_count = 0
         self._block_until: datetime | None = None
 
-    def _check_blocked(self, func: CallableWithMeta[P, R_co]) -> None:
+    def _is_blocked(self) -> bool:
         if self._block_until is None:
-            return
+            return False
 
-        if datetime.now(UTC) < self._block_until:
+        if datetime.now(UTC) >= self._block_until:
+            self._block_until = None
+            self._failure_count = 0
+            return False
+
+        return True
+
+    def _check_blocked(self, func: CallableWithMeta[P, R_co]) -> None:
+        if self._is_blocked():
             raise BreakerError(
                 func_name=f"{func.__module__}.{func.__name__}",
                 block_time=self._block_until,
                 source_exception=None,
             )
 
-        self._block_until = None
-        self._failure_count = 0
-
     def _handle_error(self, exception: Exception, func: CallableWithMeta[P, R_co]) -> None:
         self._failure_count += 1
         if self._failure_count >= self._critical_count:
-            self._block_until = datetime.now(UTC)
+            self._block_until = datetime.now(UTC) + timedelta(seconds=self._time_to_recover)
+            self._failure_count = 0
             raise BreakerError(
                 func_name=f"{func.__module__}.{func.__name__}",
                 block_time=self._block_until,
@@ -84,16 +90,17 @@ class CircuitBreaker:
             ) from exception
         raise exception
 
-    def _execute_func(self, func: CallableWithMeta[P, R_co], *args: P.args, **kwargs: P.kwargs) -> Any:
+    def _execute_func(self, func: CallableWithMeta[P, R_co], *args: P.args, **kwargs: P.kwargs) -> R_co:
         try:
             result = func(*args, **kwargs)
         except self._triggers_on as e:
             self._handle_error(e, func)
+            raise
         else:
             self._failure_count = 0
             return result
 
-    def __call__(self, func: CallableWithMeta[P, R_co]) -> CallableWithMeta[P, R_co] | None:
+    def __call__(self, func: CallableWithMeta[P, R_co]) -> CallableWithMeta[P, R_co]:
         @functools.wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R_co:
             self._check_blocked(func)
