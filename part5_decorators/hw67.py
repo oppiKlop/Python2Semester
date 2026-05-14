@@ -64,6 +64,7 @@ class CircuitBreaker:
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R_co:
             self._check_blocked(func)
             return self._execute_func(func, *args, **kwargs)
+
         return wrapper
 
     def _check_blocked(self, func: CallableWithMeta[P, R_co]) -> None:
@@ -78,18 +79,17 @@ class CircuitBreaker:
         if self._block_time is None:
             return False
 
-        if datetime.now(UTC) >= self._block_time + timedelta(seconds=self._time_to_recover):
+        if datetime.now(UTC) > self._block_time + timedelta(seconds=self._time_to_recover):
             self._block_time = None
             self._failure_count = 0
             return False
 
         return True
 
-
     def _handle_error(self, exception: Exception, func: CallableWithMeta[P, R_co]) -> None:
         self._failure_count += 1
         if self._failure_count >= self._critical_count:
-            self._block_time = datetime.now(UTC) + timedelta(seconds=self._time_to_recover)
+            self._block_time = datetime.now(UTC)
             self._failure_count = 0
             raise BreakerError(
                 func_name=f"{func.__module__}.{func.__name__}",
