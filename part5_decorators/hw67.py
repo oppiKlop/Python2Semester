@@ -87,7 +87,9 @@ class CircuitBreaker:
         self._blocked_until = block_time
 
         error = BreakerError(func_name=self._func_name(func), block_time=block_time)
-        raise error from source_error
+        error.__cause__ = source_error
+
+        raise error
 
     def _handle_exception(self, func: CallableWithMeta[P, R_co], error: Exception) -> None:
         if not isinstance(error, self.triggers_on):
