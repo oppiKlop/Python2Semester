@@ -79,7 +79,7 @@ class CircuitBreaker:
         if self._block_time is None:
             return False
 
-        if datetime.now(UTC) > self._block_time + timedelta(seconds=self._time_to_recover):
+        if datetime.now(UTC) >= self._block_time + timedelta(seconds=self._time_to_recover):
             self._block_time = None
             self._failure_count = 0
             return False
