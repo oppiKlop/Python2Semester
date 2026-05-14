@@ -63,9 +63,7 @@ class CircuitBreaker:
                 if now < self._blocked_until:
                     err = BreakerError(TOO_MUCH)
                     err.func_name = f"{func.__module__}.{func.__name__}"
-                    err.block_time = datetime.fromtimestamp(
-                        self._blocked_until, tz=UTC
-                    )
+                    err.block_time = datetime.fromtimestamp(self._blocked_until, tz=UTC)
                     raise err
                 self._blocked_until = None
                 self._fail_count = 0
@@ -91,6 +89,7 @@ class CircuitBreaker:
             else:
                 self._fail_count = 0
                 return result
+
         return wrapper
 
 
