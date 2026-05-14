@@ -4,7 +4,6 @@ from datetime import UTC, datetime
 from typing import Any, ParamSpec, Protocol, TypeVar
 from urllib.request import urlopen
 
-
 INVALID_CRITICAL_COUNT = "Breaker count must be positive integer!"
 INVALID_RECOVERY_TIME = "Breaker recovery time must be positive integer!"
 VALIDATIONS_FAILED = "Invalid decorator args."
@@ -54,19 +53,25 @@ class CircuitBreaker:
         self._blocked_until: float | None = None
 
     def __call__(self, func: CallableWithMeta[P, R_co]) -> CallableWithMeta[P, R_co]:
+        fail_count = 0
+        blocked_until: float | None = None
+
         @functools.wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R_co:
+            nonlocal fail_count, blocked_until
+
             now_dt = datetime.now(UTC)
             now = now_dt.timestamp()
 
-            if self._blocked_until is not None:
-                if now < self._blocked_until:
+            if blocked_until is not None:
+                if now < blocked_until:
                     err = BreakerError(TOO_MUCH)
                     err.func_name = f"{func.__module__}.{func.__name__}"
-                    err.block_time = datetime.fromtimestamp(self._blocked_until, tz=UTC)
+                    err.block_time = datetime.fromtimestamp(blocked_until, tz=UTC)
                     raise err
-                self._blocked_until = None
-                self._fail_count = 0
+
+                blocked_until = None
+                fail_count = 0
 
             try:
                 result = func(*args, **kwargs)
@@ -74,20 +79,20 @@ class CircuitBreaker:
             except Exception as e:
                 if not isinstance(e, self.triggers_on):
                     raise
-                self._fail_count += 1
 
-                if self._fail_count > self.critical_count:
-                    self._blocked_until = now + self.time_to_recover
+                fail_count += 1
+
+                if fail_count >= self.critical_count:
+                    blocked_until = now + self.time_to_recover
 
                     err = BreakerError(TOO_MUCH)
                     err.func_name = f"{func.__module__}.{func.__name__}"
-                    err.block_time = now_dt
-
+                    err.block_time = datetime.fromtimestamp(blocked_until, tz=UTC)
                     raise err from e
                 raise
 
             else:
-                self._fail_count = 0
+                fail_count = 0
                 return result
 
         return wrapper
