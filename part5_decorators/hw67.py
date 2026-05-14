@@ -84,10 +84,10 @@ class CircuitBreaker:
 
     def _activate_breaker(self, func: CallableWithMeta[P, R_co], source_error: Exception) -> None:
         block_time = datetime.now(UTC) + timedelta(seconds=self.time_to_recover)
-
         self._blocked_until = block_time
 
-        raise BreakerError(func_name=self._func_name(func), block_time=block_time) from source_error
+        error = BreakerError(func_name=self._func_name(func), block_time=block_time)
+        raise error from source_error
 
     def _handle_exception(self, func: CallableWithMeta[P, R_co], error: Exception) -> None:
         if not isinstance(error, self.triggers_on):
