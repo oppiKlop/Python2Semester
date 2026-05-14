@@ -57,35 +57,43 @@ class CircuitBreaker:
         self._triggers_on = triggers_on
 
         self._failure_count = 0
-        self._block_until: datetime | None = None
+        self._block_time: datetime | None = None
 
-    def _is_blocked(self) -> bool:
-        if self._block_until is None:
-            return False
-
-        if datetime.now(UTC) >= self._block_until:
-            self._block_until = None
-            self._failure_count = 0
-            return False
-
-        return True
+    def __call__(self, func: CallableWithMeta[P, R_co]) -> CallableWithMeta[P, R_co]:
+        @functools.wraps(func)
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R_co:
+            self._check_blocked(func)
+            return self._execute_func(func, *args, **kwargs)
+        return wrapper
 
     def _check_blocked(self, func: CallableWithMeta[P, R_co]) -> None:
         if self._is_blocked():
             raise BreakerError(
                 func_name=f"{func.__module__}.{func.__name__}",
-                block_time=self._block_until,
+                block_time=self._block_time,
                 source_exception=None,
             )
+
+    def _is_blocked(self) -> bool:
+        if self._block_time is None:
+            return False
+
+        if datetime.now(UTC) >= self._block_time + timedelta(seconds=self._time_to_recover):
+            self._block_time = None
+            self._failure_count = 0
+            return False
+
+        return True
+
 
     def _handle_error(self, exception: Exception, func: CallableWithMeta[P, R_co]) -> None:
         self._failure_count += 1
         if self._failure_count >= self._critical_count:
-            self._block_until = datetime.now(UTC) + timedelta(seconds=self._time_to_recover)
+            self._block_time = datetime.now(UTC) + timedelta(seconds=self._time_to_recover)
             self._failure_count = 0
             raise BreakerError(
                 func_name=f"{func.__module__}.{func.__name__}",
-                block_time=self._block_until,
+                block_time=self._block_time,
                 source_exception=exception,
             ) from exception
         raise exception
@@ -99,14 +107,6 @@ class CircuitBreaker:
         else:
             self._failure_count = 0
             return result
-
-    def __call__(self, func: CallableWithMeta[P, R_co]) -> CallableWithMeta[P, R_co]:
-        @functools.wraps(func)
-        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R_co:
-            self._check_blocked(func)
-            return self._execute_func(func, *args, **kwargs)
-
-        return wrapper
 
 
 circuit_breaker = CircuitBreaker(5, 30, Exception)
