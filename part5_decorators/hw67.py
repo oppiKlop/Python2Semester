@@ -22,7 +22,7 @@ class CallableWithMeta(Protocol[P, R_co]):
 
 
 class BreakerError(Exception):
-    def __init__(self, func_name: str, block_time: datetime) -> None:
+    def __init__(self, func_name: str, block_time: datetime | None) -> None:
         super().__init__(TOO_MUCH)
         self.func_name = func_name
         self.block_time = block_time
@@ -46,12 +46,14 @@ class CircuitBreaker:
 
     @staticmethod
     def _validate_positive_int(value: int, message: str) -> ValueError | None:
-        if (isinstance(value, bool) or value <= 0):
+        if isinstance(value, bool) or value <= 0:
             return ValueError(message)
         return None
 
     def _validate_args(self, critical_count: int, time_to_recover: int) -> None:
-        errors = [error for error in (
+        errors = [
+            error
+            for error in (
                 self._validate_positive_int(
                     critical_count,
                     INVALID_CRITICAL_COUNT,
@@ -76,10 +78,6 @@ class CircuitBreaker:
             return False
 
         return datetime.now(UTC) < blocked_until
-
-    def _reset(self) -> None:
-        self._fails = 0
-        self._blocked_until = None
 
     def _raise_blocked(self, func: CallableWithMeta[P, R_co]) -> None:
         raise BreakerError(func_name=self._func_name(func), block_time=self._blocked_until)
@@ -108,8 +106,6 @@ class CircuitBreaker:
             if self._is_blocked():
                 self._raise_blocked(func)
 
-            self._reset()
-
             try:
                 result = func(*args, **kwargs)
             except Exception as error:
@@ -121,7 +117,9 @@ class CircuitBreaker:
 
         return wrapper
 
+
 circuit_breaker = CircuitBreaker(5, 30, Exception)
+
 
 def get_comments(post_id: int) -> Any:
     response = urlopen(f"https://jsonplaceholder.typicode.com/comments?postId={post_id}")
