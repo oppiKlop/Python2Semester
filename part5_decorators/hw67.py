@@ -95,10 +95,10 @@ class CircuitBreaker:
 
         self._fails += 1
 
-        if self._fails < self.critical_count:
-            raise error
+        if self._fails >= self.critical_count:
+            self._activate_breaker(func, error)
 
-        self._activate_breaker(func, error)
+        raise error
 
     def __call__(self, func: CallableWithMeta[P, R_co]) -> CallableWithMeta[P, R_co]:
         @wraps(func)
