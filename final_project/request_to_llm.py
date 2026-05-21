@@ -40,11 +40,7 @@ def _generate_text(
     config: types.GenerateContentConfig,
 ) -> str | None:
     try:
-        response = client.models.generate_content(
-            model=model,
-            contents=contents,
-            config=config
-        )
+        response = client.models.generate_content(model=model, contents=contents, config=config)
     except KeyboardInterrupt:
         return None
     except Exception as exc:
