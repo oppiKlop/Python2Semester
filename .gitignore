@@ -136,12 +136,18 @@ celerybeat.pid
 
 # Environments
 .env
+final_project/config.yaml
+final_project/token.txt
 .envrc
 .venv
 env/
 venv/
+final_project/.venv
 ENV/
 env.bak/
+final_project/__pycache__
+final_project/.mypy_cache
+final_project/.ruff_cache
 venv.bak/
 
 # Spyder project settings

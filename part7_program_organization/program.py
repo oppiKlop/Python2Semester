@@ -25,8 +25,6 @@ def read_data(filename: str) -> list[str]:
     return records
 
 
-
-
 # Provide lines
 def read_data(lines):
     records = []
@@ -34,6 +32,7 @@ def read_data(lines):
         ...
         records.append(r)
     return records
+
 
 # if __name__ == "__main__":
 d = read_data("file.csv")
