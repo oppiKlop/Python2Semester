@@ -26,7 +26,6 @@ def read_text_file(path_str: str) -> str:
 
 
 def expand_file_references(text: str) -> str:
-    """Подставляет содержимое файлов вместо @::path::."""
     result = text
     for match in FILE_REF_PATTERN.finditer(text):
         path_str = match.group(1)
