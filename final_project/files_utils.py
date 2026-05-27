@@ -14,7 +14,10 @@ def read_text_file(path_str: str) -> str:
     path = Path(path_str).expanduser()
     if not path.is_file():
         raise FileProcessingError(f'Файл не найден: {path}')
-    size = path.stat().st_size
+    try:
+        size = path.stat().st_size
+    except OSError as exc:
+        raise FileProcessingError(f'Не удалось получить информацию о файле {path}: {exc}') from exc
     if size > MAX_FILE_SIZE:
         raise FileProcessingError(
             f'Файл {path} слишком большой ({size} байт). Максимум: {MAX_FILE_SIZE} байт.',
@@ -23,6 +26,8 @@ def read_text_file(path_str: str) -> str:
         return path.read_text(encoding='utf-8')
     except UnicodeDecodeError as exc:
         raise FileProcessingError(f'Файл {path} не является текстовым (UTF-8).') from exc
+    except OSError as exc:
+        raise FileProcessingError(f'Не удалось прочитать файл {path}: {exc}') from exc
 
 
 def expand_file_references(text: str) -> str:

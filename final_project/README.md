@@ -9,6 +9,7 @@
 * лимиты на размер контекста;
 * поддержка файлов;
 * обработка больших файлов по частям;
+* streaming-вывод ответа модели в реальном времени;
 * настройка через `.env` или `config.yaml`.
 
 ---
@@ -33,6 +34,7 @@ pip install -r requirements.txt
 
 ```yaml
 api_key: YOUR_API_KEY
+api_host: https://generativelanguage.googleapis.com/
 model: gemini-2.5-flash
 temperature: 0.7
 
@@ -43,6 +45,8 @@ system_prompt: |
   Ты senior Python developer.
   Отвечай кратко и по делу.
 ```
+
+`api_key` и `temperature` обязательны.
 
 ---
 
@@ -101,6 +105,7 @@ python main.py
 ```bash
 ruff check .
 mypy .
+pytest --cov=. --cov-report=html
 ```
 
 ---
@@ -117,16 +122,3 @@ mypy .
 | `file_chunk_mode.py` | режим чанков      |
 
 ---
-
-# Пример
-
-```text
->>> Привет
-Привет! Чем могу помочь?
-
->>> Объясни этот код @::./main.py::
-
->>> /reset
-
->>> \q
-```

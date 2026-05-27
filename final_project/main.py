@@ -26,7 +26,7 @@ def clear_screen() -> None:
 def print_config_hint() -> None:
     print(
         'Не найдена конфигурация.\n'
-        'Задайте переменные окружения (API_KEY, API_HOST, TEMPERATURE и др.) '
+        'Задайте переменные окружения (API_KEY, TEMPERATURE и др.) '
         'или создайте config.yaml в каталоге final_project.',
     )
 
@@ -39,11 +39,22 @@ def handle_user_message(config: AppConfig, context: ChatContext, raw_input: str)
         return
 
     pending = context.prepare_with_user_message(message)
-    response = request_chat_completion(config, pending)
+    stream_state = {'used': False}
+
+    def on_delta(text: str) -> None:
+        stream_state['used'] = True
+        print(text, end='', flush=True)
+
+    response = request_chat_completion(config, pending, on_delta=on_delta)
     if response is None:
+        if stream_state['used']:
+            print()
         return
 
-    print_llm_response(response)
+    if stream_state['used']:
+        print()
+    else:
+        print_llm_response(response)
     context.messages = pending
     context.add_assistant_message(response)
 
@@ -70,9 +81,16 @@ def run_chat_loop(config: AppConfig) -> None:
             clear_screen()
             continue
 
-        chunk_cmd = parse_file_chunk_command(stripped)
+        try:
+            chunk_cmd = parse_file_chunk_command(stripped)
+        except ValueError as exc:
+            print(exc)
+            continue
         if chunk_cmd is not None:
-            run_file_chunk_mode(config, chunk_cmd, on_response=print_llm_response)
+            try:
+                run_file_chunk_mode(config, chunk_cmd, on_response=lambda _: None)
+            except LLMServiceError as exc:
+                print(exc)
             continue
 
         if not stripped:

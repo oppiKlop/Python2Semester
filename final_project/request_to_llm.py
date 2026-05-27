@@ -1,3 +1,6 @@
+import asyncio
+from collections.abc import AsyncIterator, Callable
+
 from google import genai
 from google.genai import types
 
@@ -38,23 +41,80 @@ def _generate_text(
     model: str,
     contents: list[types.Content],
     config: types.GenerateContentConfig,
+    on_delta: Callable[[str], None] | None = None,
 ) -> str | None:
     try:
-        response = client.models.generate_content(model=model, contents=contents, config=config)
+        return asyncio.run(
+            _generate_text_async(
+                client,
+                model=model,
+                contents=contents,
+                config=config,
+                on_delta=on_delta,
+            ),
+        )
     except KeyboardInterrupt:
         return None
     except Exception as exc:
         raise LLMServiceError(message='Ошибка при обращении к Gemini API (Turn On vPN)') from exc
-    return response.text or ''
 
 
-def request_chat_completion(config: AppConfig, history: list[dict[str, str]]) -> str | None:
+async def _generate_text_async(
+    client: genai.Client,
+    *,
+    model: str,
+    contents: list[types.Content],
+    config: types.GenerateContentConfig,
+    on_delta: Callable[[str], None] | None = None,
+) -> str | None:
+    try:
+        response_text = ''
+        async for text_delta in _stream_text_deltas(
+            client,
+            model=model,
+            contents=contents,
+            config=config,
+        ):
+            response_text += text_delta
+            if on_delta is not None:
+                on_delta(text_delta)
+    except KeyboardInterrupt:
+        return None
+    except Exception as exc:
+        raise LLMServiceError(message='Ошибка при обращении к Gemini API (Turn On vPN)') from exc
+    return response_text
+
+
+async def _stream_text_deltas(
+    client: genai.Client,
+    *,
+    model: str,
+    contents: list[types.Content],
+    config: types.GenerateContentConfig,
+) -> AsyncIterator[str]:
+    stream = await client.aio.models.generate_content_stream(
+        model=model,
+        contents=contents,
+        config=config,
+    )
+    async for chunk in stream:
+        text_delta = chunk.text or ''
+        if text_delta:
+            yield text_delta
+
+
+def request_chat_completion(
+    config: AppConfig,
+    history: list[dict[str, str]],
+    on_delta: Callable[[str], None] | None = None,
+) -> str | None:
     client = _build_client(config)
     return _generate_text(
         client,
         model=config.model,
         contents=_to_gemini_contents(history),
         config=_generate_config(config),
+        on_delta=on_delta,
     )
 
 
@@ -62,6 +122,7 @@ def request_chunk_completion(
     config: AppConfig,
     user_prompt: str,
     chunk_text: str,
+    on_delta: Callable[[str], None] | None = None,
 ) -> str | None:
     client = _build_client(config)
     contents = [
@@ -75,4 +136,5 @@ def request_chunk_completion(
         model=config.model,
         contents=contents,
         config=_generate_config(config),
+        on_delta=on_delta,
     )

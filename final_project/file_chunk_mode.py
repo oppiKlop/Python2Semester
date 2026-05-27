@@ -14,6 +14,16 @@ CHUNK_CMD_PATTERN = re.compile(
 )
 
 
+def _parse_positive_int(raw_value: str, option_name: str) -> int:
+    try:
+        value = int(raw_value)
+    except ValueError as exc:
+        raise ValueError(f'Параметр {option_name} должен быть числом, получено: {raw_value!r}') from exc
+    if value <= 0:
+        raise ValueError(f'Параметр {option_name} должен быть больше 0, получено: {value}')
+    return value
+
+
 def parse_file_chunk_command(raw: str) -> dict[str, int | bool | None] | None:
     match = CHUNK_CMD_PATTERN.match(raw.strip())
     if not match:
@@ -28,9 +38,14 @@ def parse_file_chunk_command(raw: str) -> dict[str, int | bool | None] | None:
         if token == '-y':
             auto = True
         elif token.startswith('paragraph='):
-            paragraph_size = int(token.split('=', 1)[1])
+            paragraph_size = _parse_positive_int(token.split('=', 1)[1], 'paragraph')
         elif token.startswith('len='):
-            char_len = int(token.split('=', 1)[1])
+            char_len = _parse_positive_int(token.split('=', 1)[1], 'len')
+        elif token:
+            raise ValueError(
+                f'Неизвестный параметр для /filechunk: {token!r}. '
+                'Поддерживаются: -y, paragraph=<int>, len=<int>.',
+            )
 
     return {
         'auto': auto,
@@ -84,9 +99,16 @@ def run_file_chunk_mode(
                 if continuation == '':
                     break
 
-        response = request_chunk_completion(config, user_prompt, chunk)
+        response = request_chunk_completion(
+            config,
+            user_prompt,
+            chunk,
+            on_delta=lambda text: print(text, end='', flush=True),
+        )
         if response is None:
+            print()
             return
+        print()
         on_response(response)
 
     print('Обработка файла завершена.')

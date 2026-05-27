@@ -2,7 +2,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-import yaml  # type: ignore[import-untyped]
+import yaml
 
 CONFIG_FILE = Path(__file__).resolve().parent / 'config.yaml'
 
@@ -10,7 +10,6 @@ CONFIG_FILE = Path(__file__).resolve().parent / 'config.yaml'
 @dataclass
 class AppConfig:
     api_key: str
-    api_host: str
     temperature: float
     limit_message: int | None
     limit_chars: int | None
@@ -42,8 +41,13 @@ def _parse_float(value: str | float | None, name: str) -> float:
 def _load_yaml() -> dict[str, object]:
     if not CONFIG_FILE.exists():
         return {}
-    with CONFIG_FILE.open(encoding='utf-8') as file:
-        data = yaml.safe_load(file)
+    try:
+        with CONFIG_FILE.open(encoding='utf-8') as file:
+            data = yaml.safe_load(file)
+    except yaml.YAMLError as exc:
+        raise ValueError(f'Некорректный YAML в {CONFIG_FILE.name}: {exc}') from exc
+    except OSError as exc:
+        raise ValueError(f'Не удалось прочитать {CONFIG_FILE.name}: {exc}') from exc
     return data if isinstance(data, dict) else {}
 
 
@@ -61,7 +65,7 @@ def load_config() -> AppConfig | None:
     yaml_data = _load_yaml()
     has_env = any(
         os.environ.get(name)
-        for name in ('API_KEY', 'API_HOST', 'LIMIT_MESSAGE', 'LIMIT_CHARS', 'TEMPERATURE', 'MODEL')
+        for name in ('API_KEY', 'LIMIT_MESSAGE', 'LIMIT_CHARS', 'TEMPERATURE', 'MODEL')
     )
     has_yaml = CONFIG_FILE.exists()
 
@@ -69,16 +73,15 @@ def load_config() -> AppConfig | None:
         return None
 
     api_key = _get_value('API_KEY', yaml_data, 'api_key')
-    api_host = _get_value('API_HOST', yaml_data, 'api_host')
     temperature_raw = _get_value('TEMPERATURE', yaml_data, 'temperature')
     limit_message_raw = _get_value('LIMIT_MESSAGE', yaml_data, 'limit_message')
     limit_chars_raw = _get_value('LIMIT_CHARS', yaml_data, 'limit_chars')
     model = _get_value('MODEL', yaml_data, 'model') or 'gemini-2.5-flash'
 
-    if not api_key or not api_host:
+    if not api_key:
         raise ValueError(
-            'Укажите api_key и api_host через переменные окружения '
-            '(API_KEY, API_HOST) или в config.yaml (api_key, api_host).',
+            'Укажите api_key через переменную окружения API_KEY '
+            'или в config.yaml (api_key).',
         )
 
     system_prompt = yaml_data.get('system_prompt')
@@ -87,7 +90,6 @@ def load_config() -> AppConfig | None:
 
     return AppConfig(
         api_key=api_key,
-        api_host=api_host,
         temperature=_parse_float(temperature_raw, 'temperature'),
         limit_message=_parse_int(limit_message_raw, 'limit_message'),
         limit_chars=_parse_int(limit_chars_raw, 'limit_chars'),
